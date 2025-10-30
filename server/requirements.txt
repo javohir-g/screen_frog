@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 pillow
-pytesseract
 requests
 python-multipart
 google-generativeai
+google-cloud-vision

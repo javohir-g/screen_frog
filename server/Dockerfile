@@ -1,8 +1,7 @@
 FROM python:3.12-slim
 
-# 1. Установка tesseract-ocr и рус/eng языковых пакетов
-RUN apt-get update && \
-    apt-get install -y tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng python3-pip && \
+# 1. Базовые утилиты и обновление pip
+RUN apt-get update && apt-get install -y python3-pip && rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip
 
 # 2. Копируем server/
