@@ -23,7 +23,5 @@ def on_hotkey():
 
 def listen_hotkey():
     keyboard.add_hotkey("ctrl+shift+x", on_hotkey)
-    try:
-        keyboard.wait("esc")
-    except KeyboardInterrupt:
-        _log("⚠️ Клиент остановлен")
+    _log("Жду нажатия Ctrl+Shift+X. Esc больше не завершает клиент.")
+    keyboard.wait()  # ждать любые события, но не выходить на esc

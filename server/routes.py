@@ -26,7 +26,7 @@ async def process(file: UploadFile = File(...)):
         # 3) И потом ответ ИИ
         result = analyze_text(text)
         try:
-            send_to_telegram(f"Ответ ИИ:\n{result}")
+            send_to_telegram(result)
         except Exception as e:
             print(f"⚠️ Ошибка отправки ответа ИИ в Telegram: {e}")
         return {"status": "ok", "result": result}
