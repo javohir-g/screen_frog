@@ -4,3 +4,4 @@ pillow
 pytesseract
 requests
 python-multipart
+google-generativeai
