@@ -1,9 +1,10 @@
 import time
 import io
-from typing import Optional
+from typing import Optional, Tuple
 
 import psutil
-from PIL import ImageGrab, Image
+from PIL import Image
+import mss
 
 try:
     import win32gui
@@ -106,6 +107,22 @@ class SEBCapture:
         except Exception:
             return False
 
+    def _grab_bbox(self, bbox: Tuple[int, int, int, int]) -> Optional[Image.Image]:
+        """Захват области экрана через mss (без COM). bbox=(left, top, right, bottom)"""
+        try:
+            left, top, right, bottom = bbox
+            width = max(0, right - left)
+            height = max(0, bottom - top)
+            if width == 0 or height == 0:
+                return None
+            with mss.mss() as sct:
+                shot = sct.grab({"left": left, "top": top, "width": width, "height": height})
+                # shot is BGRA
+                img = Image.frombytes("RGB", (shot.width, shot.height), shot.rgb)
+                return img
+        except Exception:
+            return None
+
     def try_alternative_methods(self) -> Optional[Image.Image]:
         """Альтернативные методы захвата"""
         try:
@@ -113,9 +130,9 @@ class SEBCapture:
             if windows and win32gui is not None:
                 hwnd = windows[0]['hwnd']
                 self.bypass_window_protection(hwnd)
-                # Захват через PIL по прямоугольнику окна
+                # Захват через mss по прямоугольнику окна
                 left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-                return ImageGrab.grab((left, top, right, bottom))
+                return self._grab_bbox((left, top, right, bottom))
         except Exception:
             return None
         return None
@@ -131,8 +148,15 @@ class SEBCapture:
             img = method()
             if img is not None:
                 return img
-        # Fallback: полный экран
-        return ImageGrab.grab()
+        # Fallback: полный экран через mss
+        try:
+            with mss.mss() as sct:
+                mon = sct.monitors[1] if len(sct.monitors) > 1 else sct.monitors[0]
+                shot = sct.grab(mon)
+                return Image.frombytes("RGB", (shot.width, shot.height), shot.rgb)
+        except Exception:
+            # Последний шанс: пустая картинка 1x1, чтобы не падать
+            return Image.new("RGB", (1, 1), color=(0, 0, 0))
 
     def capture_bytes_png(self) -> bytes:
         image = self.capture_best_effort()

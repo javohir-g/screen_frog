@@ -1,8 +1,9 @@
 pillow
 requests
 keyboard
-dxcam==0.0.12
-opencv-python==4.8.1.78
-pywin32==306
-psutil==5.9.6
-numpy==1.24.3
+dxcam
+opencv-python
+pywin32
+psutil
+numpy
+mss

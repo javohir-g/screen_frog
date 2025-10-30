@@ -32,12 +32,17 @@ def _log(message):
         print(message)
 
 def send_to_server(image_bytes):
-    try:
-        response = requests.post(
-            CONFIG["server_url"],
-            files={"file": ("screenshot.png", image_bytes, "image/png")},
-            timeout=30
-        )
-        _log(f"✅ Ответ от сервера: {response.text}")
-    except Exception as e:
-        _log(f"❌ Ошибка отправки: {e}")
+    last_error = None
+    for attempt in range(2):  # 1 попытка + 1 повтор
+        try:
+            response = requests.post(
+                CONFIG["server_url"],
+                files={"file": ("screenshot.png", image_bytes, "image/png")},
+                timeout=60
+            )
+            _log(f"✅ Ответ от сервера: {response.text}")
+            return
+        except Exception as e:
+            last_error = e
+            _log(f"⚠️ Повтор отправки ({attempt+1}/2) из-за ошибки: {e}")
+    _log(f"❌ Ошибка отправки: {last_error}")
