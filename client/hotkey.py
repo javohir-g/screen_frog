@@ -17,9 +17,22 @@ def _log(message):
         print(message)
 
 def on_hotkey():
-    _log("📸 Делаю скриншот...")
-    image_bytes = take_screenshot()
-    send_to_server(image_bytes)
+    # Ensure COM is initialized in this callback thread to avoid comtypes finalizer crashes
+    try:
+        import pythoncom
+        pythoncom.CoInitialize()
+    except Exception:
+        pythoncom = None
+    try:
+        _log("📸 Делаю скриншот...")
+        image_bytes = take_screenshot()
+        send_to_server(image_bytes)
+    finally:
+        try:
+            if pythoncom:
+                pythoncom.CoUninitialize()
+        except Exception:
+            pass
 
 def listen_hotkey():
     keyboard.add_hotkey("ctrl+shift+x", on_hotkey)
