@@ -2,47 +2,41 @@ import requests
 import os
 from prompt_manager import load_prompt
 
-OPENAI_KEY = os.environ["OPENAI_KEY"]
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# === API Key ===
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+
 
 def analyze_text(text: str):
+    """Send text to Google Gemini API for analysis."""
     system_prompt = load_prompt()
+
+    url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
+    headers = {"Content-Type": "application/json"}
+    params = {"key": GEMINI_API_KEY}
+
     payload = {
-        "model": OPENAI_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": text},
-        ],
-        "temperature": 0,
-        "max_tokens": 400,
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": f"{system_prompt}\n\n{text}"}
+                ],
+            }
+        ]
     }
-    headers = {
-        "Authorization": f"Bearer {OPENAI_KEY}",
-        "Content-Type": "application/json"
-    }
+
     try:
-        res = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=30,
-        )
+        res = requests.post(url, headers=headers, params=params, json=payload, timeout=30)
         data = res.json()
     except Exception as e:
-        return f"AI request failed: {e}"
+        return f"GEMINI request failed: {e}"
 
-    if res.status_code != 200:
-        err = (data.get("error") or {}).get("message") if isinstance(data, dict) else None
-        return f"AI error: HTTP {res.status_code} | {err or data}"
+    if "error" in data:
+        return f"GEMINI error: {data['error']}"
 
-    choices = data.get("choices")
-    if not choices:
-        return f"AI response missing choices: {data}"
-    message = choices[0].get("message", {})
-    content = message.get("content")
-    if not content:
-        return f"AI response missing content: {data}"
-    return content
-
-
+    try:
+        # Основной ответ Gemini находится здесь
+        content = data["candidates"][0]["content"]["parts"][0]["text"]
+        return content
+    except Exception:
+        return f"GEMINI response format error: {data}"
