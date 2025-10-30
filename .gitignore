@@ -1,0 +1,24 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# IDE/OS
+.vscode/
+.DS_Store
+
+# Local configs (НЕ коммитить секреты)
+server/config.json
+cloud_server/config.json
+client/config.json
+client/client.log
+\n# Secrets\nserver/api.txt\ncloud_server/api.txt\n
+server/api.txt
