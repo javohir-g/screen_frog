@@ -4,4 +4,4 @@ pillow
 requests
 python-multipart
 google-generativeai
-google-cloud-vision
+pytesseract

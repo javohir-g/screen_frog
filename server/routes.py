@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from ocr_reader import extract_text
+from ocr import extract_text
 from ai_handler import analyze_text
 from telegram_bot import send_to_telegram, send_photo, send_pre
 import traceback
