@@ -6,6 +6,14 @@ import traceback
 
 router = APIRouter()
 
+@router.get("/")
+async def root():
+    return {"status": "ok", "message": "Screen Frog server is running"}
+
+@router.get("/healthz")
+async def healthz():
+    return {"ok": True}
+
 @router.post("/process")
 async def process(file: UploadFile = File(...)):
     try:
