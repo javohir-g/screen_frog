@@ -2,6 +2,9 @@ import requests
 import json
 import os
 import sys
+import io
+from typing import Optional, Tuple
+from PIL import Image
 
 def _get_config_path():
     if getattr(sys, 'frozen', False):
@@ -31,18 +34,57 @@ def _log(message):
     else:
         print(message)
 
+def _reencode(image_bytes: bytes, max_side: int, quality: int) -> bytes:
+    try:
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        w, h = img.size
+        scale = min(1.0, float(max_side) / max(w, h))
+        if scale < 1.0:
+            img = img.resize((int(w * scale), int(h * scale)))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality, optimize=True)
+        return buf.getvalue()
+    except Exception:
+        return image_bytes
+
+
+def _wake_server_if_needed(url: str, timeout_s: int):
+    try:
+        # Try to call docs endpoint to wake Render dyno
+        base = url.rsplit("/", 1)[0]
+        docs = base + "/docs"
+        requests.get(docs, timeout=timeout_s)
+    except Exception:
+        pass
+
+
 def send_to_server(image_bytes):
-    last_error = None
-    for attempt in range(2):  # 1 попытка + 1 повтор
+    server_url = CONFIG.get("server_url")
+    timeout_s = int(CONFIG.get("timeout_s", 60))
+
+    _wake_server_if_needed(server_url, min(10, timeout_s))
+
+    attempts = [
+        (image_bytes, "image/png", None),           # original PNG
+        (_reencode(image_bytes, 1600, 80), "image/jpeg", (1600, 80)),
+        (_reencode(image_bytes, 1200, 70), "image/jpeg", (1200, 70)),
+    ]
+
+    last_error: Optional[Exception] = None
+    for idx, (payload, mime, hint) in enumerate(attempts, start=1):
         try:
             response = requests.post(
-                CONFIG["server_url"],
-                files={"file": ("screenshot.png", image_bytes, "image/png")},
-                timeout=60
+                server_url,
+                files={"file": ("screenshot.jpg" if mime=="image/jpeg" else "screenshot.png", payload, mime)},
+                timeout=timeout_s
             )
             _log(f"✅ Ответ от сервера: {response.text}")
             return
         except Exception as e:
             last_error = e
-            _log(f"⚠️ Повтор отправки ({attempt+1}/2) из-за ошибки: {e}")
+            if hint:
+                size_hint = f" (fallback {hint[0]}px q{hint[1]})"
+            else:
+                size_hint = ""
+            _log(f"⚠️ Ошибка отправки, попытка {idx}/{len(attempts)}{size_hint}: {e}")
     _log(f"❌ Ошибка отправки: {last_error}")
