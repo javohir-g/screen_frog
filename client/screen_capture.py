@@ -2,6 +2,7 @@ import time
 import io
 from typing import Optional, Tuple
 
+import os
 import psutil
 from PIL import Image
 import mss
@@ -54,6 +55,8 @@ class SEBCapture:
 
     def capture_seb_directx(self) -> Optional[Image.Image]:
         """Попытка захвата через DirectX (dxcam)"""
+        if os.environ.get("SCREENFROG_NO_DXCAM"):
+            return None
         try:
             import dxcam
             import cv2
@@ -69,6 +72,8 @@ class SEBCapture:
 
     def capture_using_desktop_duplication(self) -> Optional[Image.Image]:
         """Использование Desktop Duplication API через dxcam с регионом окна SEB"""
+        if os.environ.get("SCREENFROG_NO_DXCAM"):
+            return None
         try:
             import dxcam
             import cv2
