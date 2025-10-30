@@ -22,17 +22,10 @@ def on_hotkey():
         import pythoncom
         pythoncom.CoInitialize()
     except Exception:
-        pythoncom = None
-    try:
-        _log("📸 Делаю скриншот...")
-        image_bytes = take_screenshot()
-        send_to_server(image_bytes)
-    finally:
-        try:
-            if pythoncom:
-                pythoncom.CoUninitialize()
-        except Exception:
-            pass
+        pass
+    _log("📸 Делаю скриншот...")
+    image_bytes = take_screenshot()
+    send_to_server(image_bytes)
 
 def listen_hotkey():
     keyboard.add_hotkey("ctrl+shift+x", on_hotkey)

@@ -3,6 +3,12 @@ import sys
 import os
 
 def main():
+    # Initialize COM in main thread to stabilize ImageGrab/comtypes lifecycle
+    try:
+        import pythoncom
+        pythoncom.CoInitialize()
+    except Exception:
+        pass
     # For compiled exe, try to write to log file in exe directory
     if getattr(sys, 'frozen', False):
         exe_dir = os.path.dirname(sys.executable)
