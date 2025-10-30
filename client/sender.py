@@ -5,6 +5,7 @@ import sys
 import io
 from typing import Optional, Tuple
 from PIL import Image
+import time
 
 def _get_config_path():
     if getattr(sys, 'frozen', False):
@@ -60,9 +61,12 @@ def _wake_server_if_needed(url: str, timeout_s: int):
 
 def send_to_server(image_bytes):
     server_url = CONFIG.get("server_url")
-    timeout_s = int(CONFIG.get("timeout_s", 60))
+    # Allow override by config; raise defaults for Render cold starts
+    timeout_s = int(CONFIG.get("timeout_s", 120))
+    max_retries = int(CONFIG.get("upload_retries", 3))
+    backoff_base = int(CONFIG.get("upload_backoff_s", 5))
 
-    _wake_server_if_needed(server_url, min(10, timeout_s))
+    _wake_server_if_needed(server_url, min(15, timeout_s))
 
     attempts = [
         (image_bytes, "image/png", None),           # original PNG
@@ -71,20 +75,21 @@ def send_to_server(image_bytes):
     ]
 
     last_error: Optional[Exception] = None
-    for idx, (payload, mime, hint) in enumerate(attempts, start=1):
-        try:
-            response = requests.post(
-                server_url,
-                files={"file": ("screenshot.jpg" if mime=="image/jpeg" else "screenshot.png", payload, mime)},
-                timeout=timeout_s
-            )
-            _log(f"✅ Ответ от сервера: {response.text}")
-            return
-        except Exception as e:
-            last_error = e
-            if hint:
-                size_hint = f" (fallback {hint[0]}px q{hint[1]})"
-            else:
-                size_hint = ""
-            _log(f"⚠️ Ошибка отправки, попытка {idx}/{len(attempts)}{size_hint}: {e}")
+    for idx_payload, (payload, mime, hint) in enumerate(attempts, start=1):
+        for retry in range(1, max_retries + 1):
+            try:
+                response = requests.post(
+                    server_url,
+                    files={"file": ("screenshot.jpg" if mime=="image/jpeg" else "screenshot.png", payload, mime)},
+                    timeout=timeout_s
+                )
+                _log(f"✅ Ответ от сервера: {response.text}")
+                return
+            except Exception as e:
+                last_error = e
+                size_hint = f" (fallback {hint[0]}px q{hint[1]})" if hint else ""
+                _log(f"⚠️ Ошибка отправки, вариант {idx_payload}/{len(attempts)}{size_hint}, попытка {retry}/{max_retries}: {e}")
+                # Exponential backoff before next retry
+                sleep_s = backoff_base * retry
+                time.sleep(sleep_s)
     _log(f"❌ Ошибка отправки: {last_error}")
